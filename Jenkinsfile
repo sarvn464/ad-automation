@@ -18,8 +18,8 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'sudo apt-get update'
-                sh 'sudo apt-get install -y python3 python3-pip'
+                sh 'apt-get update'
+                sh 'apt-get install -y python3 python3-pip'
                 sh 'pip3 install ldap3 openpyxl pandas'
             }
         }
@@ -40,4 +40,5 @@ pipeline {
         }
     }
 }
+
 
