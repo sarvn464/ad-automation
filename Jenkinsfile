@@ -2,35 +2,42 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Checkout') {
             steps {
-                git 'https://github.com/sarvn464/ad-automation.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/sarvn464/ad-automation.git',
+                        credentialsId: '014df70d-bdce-4946-aded-c05833e1cb8a'
+                    ]]
+                ])
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                pip3 install --upgrade ldap3 openpyxl
-                '''
+                sh 'sudo apt-get update'
+                sh 'sudo apt-get install -y python3 python3-pip'
+                sh 'pip3 install ldap3 openpyxl pandas'
             }
         }
 
         stage('Create AD Users') {
             steps {
-                sh '''
-                python3 create_ad_users.py
-                '''
+                sh 'python3 create_users.py'
             }
         }
     }
 
     post {
-        success {
-            echo 'AD Users created successfully in saravana.com'
-        }
         failure {
-            echo 'Error creating users'
+            echo "Error creating users"
+        }
+        success {
+            echo "AD User creation completed successfully"
         }
     }
 }
+
