@@ -1,29 +1,44 @@
-$Users = Import-Excel "C:\jenkins\excel\users.xlsx"
+# Create-ADUser.ps1
+# Requires: ActiveDirectory module, Excel file path
+
+# Path to your Excel file
+$ExcelPath = "C:\jenkins\workspace\AD-User-Automation\users.xlsx"
+
+# Import Excel module (if using ImportExcel module)
+Import-Module ImportExcel
+
+# Read all rows from Excel
+$Users = Import-Excel -Path $ExcelPath
 
 foreach ($User in $Users) {
 
-    $firstName = $User.'First Name'
-    $lastName = $User.'Last Name'
-    $username = $User.Username
-    $password = $User.Password
-    $ou        = $User.OU
-
-    if (-not $firstName -or -not $lastName -or -not $username) {
+    # Check required fields
+    if (-not $User.FirstName -or -not $User.LastName -or -not $User.Username -or -not $User.OU -or -not $User.Password) {
         Write-Host "❌ ERROR: Missing required values for row. Skipping..."
         continue
     }
 
-    $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+    # Check if user already exists in AD
+    $userExists = Get-ADUser -Filter { SamAccountName -eq $User.Username } -ErrorAction SilentlyContinue
+    if ($userExists) {
+        Write-Host "⚠ User '$($User.Username)' already exists. Skipping..."
+        continue
+    }
 
-    New-ADUser `
-        -GivenName $firstName `
-        -Surname $lastName `
-        -SamAccountName $username `
-        -UserPrincipalName "$username@saravana.com" `
-        -Name "$firstName $lastName" `
-        -EmailAddress $User.Email `
-        -Department $User.Department `
-        -AccountPassword $securePassword `
-        -Path $ou `
-        -Enabled $true
+    # Create new AD user
+    try {
+        New-ADUser `
+            -Name "$($User.FirstName) $($User.LastName)" `
+            -GivenName $User.FirstName `
+            -Surname $User.LastName `
+            -SamAccountName $User.Username `
+            -UserPrincipalName "$($User.Username)@saravana.com" `
+            -AccountPassword (ConvertTo-SecureString $User.Password -AsPlainText -Force) `
+            -Path $User.OU `
+            -Enabled $true
+
+        Write-Host "✅ User '$($User.Username)' created successfully."
+    } catch {
+        Write-Host "❌ Failed to create user '$($User.Username)': $_"
+    }
 }
