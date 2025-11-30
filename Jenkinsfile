@@ -1,44 +1,27 @@
 pipeline {
-    agent any
+    agent { label 'AD-Server' }  
 
     stages {
-
         stage('Checkout') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/sarvn464/ad-automation.git',
-                        credentialsId: '014df70d-bdce-4946-aded-c05833e1cb8a'
-                    ]]
-                ])
+                git url: 'https://github.com/sarvn464/ad-automation.git', branch: 'main'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Copy Excel to Script Path') {
             steps {
-                sh 'apt-get update'
-                sh 'apt-get install -y python3 python3-pip'
-                sh 'pip3 install ldap3 openpyxl pandas'
+                powershell '''
+                    Copy-Item "$env:WORKSPACE\\Users.xlsx" "C:\\scripts\\Users.xlsx" -Force
+                '''
             }
         }
 
-        stage('Create AD Users') {
+        stage('Run AD User Script') {
             steps {
-                sh 'python3 create_users.py'
+                powershell '''
+                    C:\\scripts\\Create-ADUser.ps1
+                '''
             }
-        }
-    }
-
-    post {
-        failure {
-            echo "Error creating users"
-        }
-        success {
-            echo "AD User creation completed successfully"
         }
     }
 }
-
-
