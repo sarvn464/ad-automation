@@ -1,10 +1,18 @@
 pipeline {
-    agent { label 'AD-Server' }  
+    agent { label 'AD-Server' }
+
+    tools {
+        git 'Git-Windows'   // 🔥 THIS LINE IS MANDATORY
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/sarvn464/ad-automation.git', branch: 'main'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[url: 'https://github.com/sarvn464/ad-automation.git']]
+                ])
             }
         }
 
