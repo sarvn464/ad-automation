@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'AD-Server' }  
+    agent any
 
     stages {
         stage('Checkout') {
@@ -8,19 +8,13 @@ pipeline {
             }
         }
 
-        stage('Copy Excel to Script Path') {
+        stage('Create AD Users') {
             steps {
-                powershell '''
-                    Copy-Item "$env:WORKSPACE\\Users.xlsx" "C:\\scripts\\Users.xlsx" -Force
-                '''
-            }
-        }
-
-        stage('Run AD User Script') {
-            steps {
-                powershell '''
-                    C:\\scripts\\Create-ADUser.ps1
-                '''
+                script {
+                    powershell """
+                    C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
+                    """
+                }
             }
         }
     }
