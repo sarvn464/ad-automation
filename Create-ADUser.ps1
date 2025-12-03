@@ -1,25 +1,44 @@
+param (
+    [string]$ExcelPath = "C:\jenkins\workspace\AD-User-Automation\users.xlsx"
+)
+
 Import-Module ActiveDirectory
 Import-Module ImportExcel
 
-$excelPath = "C:\scripts\Users.xlsx"
-$users = Import-Excel -Path $excelPath
+Write-Host "Using Excel path: $ExcelPath"
 
-foreach ($user in $users) {
-    $First = $user.FirstName
-    $Last = $user.LastName
-    $Sam = $user.Username
-    $OU = $user.OU
-    $Password = $user.Password
+$Users = Import-Excel $ExcelPath
 
+foreach ($User in $Users) {
+
+    $firstName = $User.FirstName
+    $lastName  = $User.LastName
+    $username  = $User.Username
+    $UPN       = "$username@saravana.com"
+    $password  = ConvertTo-SecureString $User.Password -AsPlainText -Force
+    $ou        = $User.OU
+
+    # Check if SamAccountName already exists
+    $ExistsSam = Get-ADUser -Filter {SamAccountName -eq $username}
+
+    # Check if UPN already exists
+    $ExistsUPN = Get-ADUser -Filter {UserPrincipalName -eq $UPN}
+
+    if ($ExistsSam -or $ExistsUPN) {
+        Write-Host "SKIPPED - User already exists: $username ($UPN)"
+        continue
+    }
+
+    # Create new AD user
     New-ADUser `
-        -Name "$First $Last" `
-        -SamAccountName $Sam `
-        -UserPrincipalName "$Sam@saravana.com" `
-        -GivenName $First `
-        -Surname $Last `
-        -Path $OU `
-        -AccountPassword (ConvertTo-SecureString $Password -AsPlainText -Force) `
-        -Enabled $true
+        -GivenName $firstName `
+        -Surname $lastName `
+        -Name "$firstName $lastName" `
+        -SamAccountName $username `
+        -UserPrincipalName $UPN `
+        -AccountPassword $password `
+        -Enabled $true `
+        -Path $ou
 
-    Write-Host "User Created: $Sam"
+    Write-Host "User CREATED: $username"
 }
