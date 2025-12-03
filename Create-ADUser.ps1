@@ -1,29 +1,46 @@
-$Users = Import-Excel "C:\jenkins\excel\users.xlsx"
+$excelPath = "$env:WORKSPACE\users.xlsx"
+
+# Auto-detect first sheet
+$sheet = (Import-Excel -Path $excelPath -ShowSheet)[0]
+$Users = Import-Excel -Path $excelPath -WorksheetName $sheet
 
 foreach ($User in $Users) {
 
-    $firstName = $User.'First Name'
-    $lastName = $User.'Last Name'
-    $username = $User.Username
-    $password = $User.Password
+    $username = $User.Username.Trim()
+    $firstName = $User.'First Name'.Trim()
+    $lastName = $User.'Last Name'.Trim()
+    $password  = $User.Password
     $ou        = $User.OU
+    $upn       = "$username@saravana.com"
 
-    if (-not $firstName -or -not $lastName -or -not $username) {
-        Write-Host "❌ ERROR: Missing required values for row. Skipping..."
+    if (-not $username) {
+        Write-Host "⚠️ Username missing — skipping row."
         continue
     }
 
+    # Pre-check both SamAccountName and UPN
+    $existingUser = Get-ADUser -Filter { SamAccountName -eq $username -or UserPrincipalName -eq $upn } -ErrorAction SilentlyContinue
+    if ($existingUser) {
+        Write-Host "⚠️ User '$username' already exists — skipping."
+        continue
+    }
+
+    # Convert password to secure string
     $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
+    # Create AD user
+    Write-Host "➡️ Creating new AD user: $username"
     New-ADUser `
         -GivenName $firstName `
         -Surname $lastName `
         -SamAccountName $username `
-        -UserPrincipalName "$username@saravana.com" `
+        -UserPrincipalName $upn `
         -Name "$firstName $lastName" `
-        -EmailAddress $User.Email `
+        -EmailAddress $upn `
         -Department $User.Department `
         -AccountPassword $securePassword `
         -Path $ou `
         -Enabled $true
+
+    Write-Host "✅ Created AD user: $username"
 }
