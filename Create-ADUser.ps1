@@ -1,25 +1,29 @@
-Import-Module ActiveDirectory
-Import-Module ImportExcel
+$Users = Import-Excel "C:\jenkins\excel\users.xlsx"
 
-$excelPath = "C:\scripts\Users.xlsx"
-$users = Import-Excel -Path $excelPath
+foreach ($User in $Users) {
 
-foreach ($user in $users) {
-    $First = $user.FirstName
-    $Last = $user.LastName
-    $Sam = $user.Username
-    $OU = $user.OU
-    $Password = $user.Password
+    $firstName = $User.'First Name'
+    $lastName = $User.'Last Name'
+    $username = $User.Username
+    $password = $User.Password
+    $ou        = $User.OU
+
+    if (-not $firstName -or -not $lastName -or -not $username) {
+        Write-Host "❌ ERROR: Missing required values for row. Skipping..."
+        continue
+    }
+
+    $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
     New-ADUser `
-        -Name "$First $Last" `
-        -SamAccountName $Sam `
-        -UserPrincipalName "$Sam@saravana.com" `
-        -GivenName $First `
-        -Surname $Last `
-        -Path $OU `
-        -AccountPassword (ConvertTo-SecureString $Password -AsPlainText -Force) `
+        -GivenName $firstName `
+        -Surname $lastName `
+        -SamAccountName $username `
+        -UserPrincipalName "$username@saravana.com" `
+        -Name "$firstName $lastName" `
+        -EmailAddress $User.Email `
+        -Department $User.Department `
+        -AccountPassword $securePassword `
+        -Path $ou `
         -Enabled $true
-
-    Write-Host "User Created: $Sam"
 }
