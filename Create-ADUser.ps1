@@ -18,6 +18,14 @@ foreach ($User in $Users) {
     $password  = ConvertTo-SecureString $User.Password -AsPlainText -Force
     $ou        = $User.OU
 
+    # --- CN name ---
+    if (-not $firstName -or -not $lastName) {
+        Write-Host "SKIPPED - Missing FirstName or LastName for user: $username"
+        continue
+    }
+
+    $CN = "$firstName $lastName"
+
     # Check if SamAccountName already exists
     $ExistsSam = Get-ADUser -Filter {SamAccountName -eq $username}
 
@@ -33,7 +41,7 @@ foreach ($User in $Users) {
     New-ADUser `
         -GivenName $firstName `
         -Surname $lastName `
-        -Name "$firstName $lastName" `
+        -Name $CN `
         -SamAccountName $username `
         -UserPrincipalName $UPN `
         -AccountPassword $password `
