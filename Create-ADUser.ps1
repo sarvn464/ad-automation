@@ -1,46 +1,40 @@
-$excelPath = "$env:WORKSPACE\users.xlsx"
+# Path to your Excel file
+$excelPath = "C:\jenkins\workspace\AD-User-Automation\Users.xlsx"
 
-# Auto-detect first sheet
-$sheet = (Import-Excel -Path $excelPath -ShowSheet)[0]
-$Users = Import-Excel -Path $excelPath -WorksheetName $sheet
+# Import the ImportExcel module
+Import-Module ImportExcel
 
-foreach ($User in $Users) {
+# Get all sheet names from the Excel file
+$sheetNames = (Get-ExcelSheetInfo -Path $excelPath).Name
 
-    $username = $User.Username.Trim()
-    $firstName = $User.'First Name'.Trim()
-    $lastName = $User.'Last Name'.Trim()
-    $password  = $User.Password
-    $ou        = $User.OU
-    $upn       = "$username@saravana.com"
+# Select the first sheet
+$sheetName = $sheetNames[0]
 
-    if (-not $username) {
-        Write-Host "⚠️ Username missing — skipping row."
-        continue
+# Import the data from the first sheet
+$users = Import-Excel -Path $excelPath -WorksheetName $sheetName
+
+# Loop through each user and create in AD
+foreach ($user in $users) {
+    try {
+        $upn = "$($user.SamAccountName)@saravana.com"
+
+        # Check if user exists
+        if (-not (Get-ADUser -Filter "SamAccountName -eq '$($user.SamAccountName)'" -ErrorAction SilentlyContinue)) {
+            # Create new AD user
+            New-ADUser `
+                -Name $user.Name `
+                -GivenName $user.GivenName `
+                -Surname $user.Surname `
+                -SamAccountName $user.SamAccountName `
+                -UserPrincipalName $upn `
+                -Path $user.OU `
+                -AccountPassword (ConvertTo-SecureString $user.Password -AsPlainText -Force) `
+                -Enabled $true
+            Write-Host "✅ Created user: $($user.SamAccountName)"
+        } else {
+            Write-Host "⚠ User already exists: $($user.SamAccountName)"
+        }
+    } catch {
+        Write-Host "❌ Failed to create user $($user.SamAccountName): $_"
     }
-
-    # Pre-check both SamAccountName and UPN
-    $existingUser = Get-ADUser -Filter { SamAccountName -eq $username -or UserPrincipalName -eq $upn } -ErrorAction SilentlyContinue
-    if ($existingUser) {
-        Write-Host "⚠️ User '$username' already exists — skipping."
-        continue
-    }
-
-    # Convert password to secure string
-    $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-
-    # Create AD user
-    Write-Host "➡️ Creating new AD user: $username"
-    New-ADUser `
-        -GivenName $firstName `
-        -Surname $lastName `
-        -SamAccountName $username `
-        -UserPrincipalName $upn `
-        -Name "$firstName $lastName" `
-        -EmailAddress $upn `
-        -Department $User.Department `
-        -AccountPassword $securePassword `
-        -Path $ou `
-        -Enabled $true
-
-    Write-Host "✅ Created AD user: $username"
 }
