@@ -19,7 +19,7 @@ foreach ($User in $Users) {
     $action    = $User.Action
     $ou        = $User.OU
 
-    # Make sure Action exists
+    # Ensure Action exists
     if (-not $action) {
         Write-Host "SKIPPED - No Action provided for user: $username"
         continue
@@ -29,12 +29,16 @@ foreach ($User in $Users) {
     $adUser = Get-ADUser -Filter {SamAccountName -eq $username} -ErrorAction SilentlyContinue
 
 
-    # ----------------------------------------------------------
-    #  ACTION 1: CREATE USER
-    # ----------------------------------------------------------
+    # ========================================================================
+    #  ACTION: CREATE
+    # ========================================================================
     if ($action -eq "Create") {
 
-        # Validate required fields
+        if ($adUser) {
+            Write-Host "SKIPPED - User already exists: $username"
+            continue
+        }
+
         if (-not $firstName -or -not $lastName) {
             Write-Host "SKIPPED - Missing FirstName or LastName for: $username"
             continue
@@ -42,12 +46,6 @@ foreach ($User in $Users) {
 
         if (-not $password) {
             Write-Host "SKIPPED - Missing Password for: $username"
-            continue
-        }
-
-        # Skip if already exists
-        if ($adUser) {
-            Write-Host "SKIPPED - User already exists: $username"
             continue
         }
 
@@ -68,9 +66,9 @@ foreach ($User in $Users) {
     }
 
 
-    # ----------------------------------------------------------
-    #  ACTION 2: DISABLE USER
-    # ----------------------------------------------------------
+    # ========================================================================
+    #  ACTION: DISABLE
+    # ========================================================================
     elseif ($action -eq "Disable") {
 
         if ($adUser) {
@@ -78,14 +76,29 @@ foreach ($User in $Users) {
             Write-Host "User DISABLED: $username"
         }
         else {
-            Write-Host "SKIPPED - User not found for disable: $username"
+            Write-Host "SKIPPED - User not found for Disable: $username"
         }
     }
 
 
-    # ----------------------------------------------------------
+    # ========================================================================
+    #  ACTION: DELETE
+    # ========================================================================
+    elseif ($action -eq "Delete") {
+
+        if ($adUser) {
+            Remove-ADUser -Identity $username -Confirm:$false
+            Write-Host "User DELETED: $username"
+        }
+        else {
+            Write-Host "SKIPPED - User not found for Delete: $username"
+        }
+    }
+
+
+    # ========================================================================
     #  UNKNOWN ACTION
-    # ----------------------------------------------------------
+    # ========================================================================
     else {
         Write-Host "SKIPPED - Unknown Action '$action' for: $username"
     }
