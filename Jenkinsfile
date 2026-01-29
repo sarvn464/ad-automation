@@ -1,35 +1,56 @@
 pipeline {
-    agent any
+    agent any   // Linux for checkout, mail, approval
 
     stages {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/sarvn464/ad-automation.git'
+                git url: 'https://github.com/sarvn464/ad-automation.git', branch: 'main'
             }
         }
 
         stage('Notify Manager') {
             steps {
-                mail to: 'manager@company.com',
-                     subject: 'AD User Creation Approval',
-                     body: 'Please approve the request'
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    mail(
+                        to: 'saravanasunrises@gmail.com',
+                        subject: 'Approval Required: AD User Creation',
+                        body: """Hello Manager,
+
+Changes have been pushed to the MAIN branch.
+Your approval is required to create Active Directory users.
+
+👉 Click the link below to review and approve:
+${env.BUILD_URL}
+
+Job Name : ${env.JOB_NAME}
+Build No : ${env.BUILD_NUMBER}
+
+Regards,
+Jenkins
+"""
+                    )
+                }
             }
         }
 
         stage('Manager Approval') {
             steps {
-                input message: 'Manager approval required to create AD users'
+                input(
+                    message: 'Manager approval required to create AD users',
+                    ok: 'Approve',
+                    submitter: 'Jenkins-Admins'
+                )
             }
         }
 
         stage('Create AD Users') {
-            agent { label 'windows-ad' }   // 🔥 THIS IS THE FIX
+            agent { label 'windows-ad' }   // 🔥 THIS IS THE IMPORTANT LINE
             steps {
-                powershell '''
-                    Import-Module ActiveDirectory
-                    .\\create-ad-users.ps1
-                '''
+                powershell """
+                C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
+                -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
+                """
             }
         }
     }
