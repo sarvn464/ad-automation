@@ -45,7 +45,7 @@ Jenkins
         }
 
         stage('Create AD Users') {
-            agent { label 'windows-ad' }   // 🔥 THIS IS THE IMPORTANT LINE
+            agent { label 'AD-Server' }   // 🔥 THIS IS THE IMPORTANT LINE
             steps {
                 powershell """
                 C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
