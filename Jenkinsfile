@@ -1,56 +1,35 @@
 pipeline {
-    agent any // change to AD-Server if PowerShell must run on Windows
-    // agent { label 'AD-Server' }
+    agent any
 
     stages {
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/sarvn464/ad-automation.git', branch: 'main'
+                git 'https://github.com/sarvn464/ad-automation.git'
             }
         }
 
         stage('Notify Manager') {
             steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    mail(
-                        to: 'saravanasunrises@gmail.com',
-                        subject: 'Approval Required: AD User Creation',
-                        body: """Hello Manager,
-
-Changes have been pushed to the MAIN branch.
-Your approval is required to create Active Directory users.
-
-👉 Click the link below to review and approve:
-${env.BUILD_URL}
-
-Job Name : ${env.JOB_NAME}
-Build No : ${env.BUILD_NUMBER}
-
-Regards,
-Jenkins
-"""
-                    )
-                }
+                mail to: 'manager@company.com',
+                     subject: 'AD User Creation Approval',
+                     body: 'Please approve the request'
             }
         }
 
         stage('Manager Approval') {
             steps {
-                input(
-                    message: 'Manager approval required to create AD users',
-                    ok: 'Approve',
-                    submitter: 'Jenkins-Admins'
-                )
+                input message: 'Manager approval required to create AD users'
             }
         }
 
         stage('Create AD Users') {
+            agent { label 'windows-ad' }   // 🔥 THIS IS THE FIX
             steps {
-                powershell """
-                C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
-                -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
-                """
+                powershell '''
+                    Import-Module ActiveDirectory
+                    .\\create-ad-users.ps1
+                '''
             }
         }
     }
