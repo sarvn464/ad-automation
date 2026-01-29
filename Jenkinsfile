@@ -1,5 +1,6 @@
 pipeline {
-    agent any   // Linux for checkout, mail, approval
+    agent any // change to AD-Server if PowerShell must run on Windows
+    // agent { label 'AD-Server' }
 
     stages {
 
@@ -45,7 +46,6 @@ Jenkins
         }
 
         stage('Create AD Users') {
-            agent { label 'AD-Server' }   // 🔥 THIS IS THE IMPORTANT LINE
             steps {
                 powershell """
                 C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
