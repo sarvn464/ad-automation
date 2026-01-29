@@ -1,6 +1,5 @@
 pipeline {
-    agent any // change to windows-ad if PowerShell must run on Windows
-    // agent { label 'AD-Server' }
+    agent { label 'AD-Server' }  // Use a Windows agent for PowerShell execution
 
     stages {
 
@@ -42,6 +41,12 @@ Jenkins
                     ok: 'Approve',
                     submitter: 'Jenkins-Admins'
                 )
+            }
+        }
+
+        stage('Set Execution Policy') {
+            steps {
+                powershell 'Set-ExecutionPolicy RemoteSigned -Scope Process'  // Ensure script can run
             }
         }
 
