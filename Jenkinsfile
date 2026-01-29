@@ -1,5 +1,5 @@
 pipeline {
-    agent any // change to windows-ad if PowerShell must run on Windows
+    agent any // change to AD-Server if PowerShell must run on Windows
     // agent { label 'AD-Server' }
 
     stages {
