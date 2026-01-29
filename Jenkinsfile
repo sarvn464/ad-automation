@@ -11,9 +11,11 @@ pipeline {
 
         stage('Notify Manager') {
             steps {
-                mail to: 'saravanasunrises@gmail.com',
-                     subject: 'Approval Required: AD User Creation',
-                     body: """Hello Manager,
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    mail(
+                        to: 'saravanasunrises@gmail.com',
+                        subject: 'Approval Required: AD User Creation',
+                        body: """Hello Manager,
 
 Changes have been pushed to the MAIN branch.
 Approval is required to create Active Directory users.
@@ -26,25 +28,27 @@ Please login to Jenkins and approve the job.
 Regards,
 Jenkins
 """
+                    )
+                }
             }
         }
 
         stage('Manager Approval') {
             steps {
-                input message: 'Manager approval required to create AD users',
-                      ok: 'Approve',
-                      submitter: 'Jenkins-Admins'
+                input(
+                    message: 'Manager approval required to create AD users',
+                    ok: 'Approve',
+                    submitter: 'Jenkins-Admins'
+                )
             }
         }
 
         stage('Create AD Users') {
             steps {
-                script {
-                    powershell """
-                    C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
-                    -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
-                    """
-                }
+                powershell """
+                C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
+                -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
+                """
             }
         }
     }
