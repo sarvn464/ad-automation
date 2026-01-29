@@ -1,5 +1,6 @@
 pipeline {
-    agent any
+    agent any   // change to windows-ad if PowerShell must run on Windows
+    // agent { label 'windows-ad' }
 
     stages {
 
@@ -18,12 +19,13 @@ pipeline {
                         body: """Hello Manager,
 
 Changes have been pushed to the MAIN branch.
-Approval is required to create Active Directory users.
+Your approval is required to create Active Directory users.
 
-Job: ${env.JOB_NAME}
-Build: ${env.BUILD_NUMBER}
+👉 Click the link below to review and approve:
+${env.BUILD_URL}
 
-Please login to Jenkins and approve the job.
+Job Name : ${env.JOB_NAME}
+Build No : ${env.BUILD_NUMBER}
 
 Regards,
 Jenkins
