@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'AD-Server' }  // Use a Windows agent for PowerShell execution
+    agent { label 'windows-ad' }  // Use a Windows agent for PowerShell execution
 
     stages {
 
