@@ -1,56 +1,37 @@
 pipeline {
-    agent any // change to windows-ad if PowerShell must run on Windows
-    // agent { label 'AD-Server' }
+    agent none
 
     stages {
 
         stage('Checkout') {
+            agent any
             steps {
                 git url: 'https://github.com/sarvn464/ad-automation.git', branch: 'main'
             }
         }
 
         stage('Notify Manager') {
+            agent any
             steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    mail(
-                        to: 'saravanasunrises@gmail.com',
-                        subject: 'Approval Required: AD User Creation',
-                        body: """Hello Manager,
-
-Changes have been pushed to the MAIN branch.
-Your approval is required to create Active Directory users.
-
-👉 Click the link below to review and approve:
-${env.BUILD_URL}
-
-Job Name : ${env.JOB_NAME}
-Build No : ${env.BUILD_NUMBER}
-
-Regards,
-Jenkins
-"""
-                    )
-                }
-            }
-        }
-
-        stage('Manager Approval') {
-            steps {
-                input(
-                    message: 'Manager approval required to create AD users',
-                    ok: 'Approve',
-                    submitter: 'Jenkins-Admins'
+                mail(
+                    to: 'saravanasunrises@gmail.com',
+                    subject: 'Approval Required: AD User Creation',
+                    body: 'Please approve in Jenkins'
                 )
             }
         }
 
-        stage('Create AD Users') {
+        stage('Manager Approval') {
+            agent none   // 🚀 DOES NOT CONSUME EXECUTOR
             steps {
-                powershell """
-                C:\\jenkins\\workspace\\AD-User-Automation\\Create-ADUser.ps1 `
-                -ExcelPath C:\\jenkins\\workspace\\AD-User-Automation\\users.xlsx
-                """
+                input message: 'Approve AD user creation'
+            }
+        }
+
+        stage('Create AD Users') {
+            agent { label 'AD-Server' }
+            steps {
+                powershell 'Write-Host "Creating AD users..."'
             }
         }
     }
